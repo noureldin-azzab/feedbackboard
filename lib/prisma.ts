@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 // NOTE: This is the standard singleton pattern for Next.js + Prisma.
 // In production under load (serverless or long-lived), a single PrismaClient
@@ -19,7 +20,14 @@ function createPrismaClient() {
   if (!connectionString) {
     throw new Error("DATABASE_URL environment variable is not set");
   }
-  const adapter = new PrismaPg({ connectionString });
+  // Use pool size of 1 for serverless environments (Vercel functions)
+  // to avoid connection exhaustion across concurrent invocations.
+  const pool = new Pool({
+    connectionString,
+    max: 1,
+    ssl: { rejectUnauthorized: false },
+  });
+  const adapter = new PrismaPg(pool);
   return new PrismaClient({
     adapter,
     log: ["error"], // minimal logging — no query tracing
@@ -29,4 +37,5 @@ function createPrismaClient() {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
 
