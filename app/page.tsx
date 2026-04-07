@@ -10,6 +10,7 @@ import { Category, Status } from "@prisma/client";
 // handler or add Redis-backed revalidation. On AWS Lambda (SST/OpenNext) it works
 // differently. Something to address in the migration.
 export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 type SearchParams = {
   search?: string;

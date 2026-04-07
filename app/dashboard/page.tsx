@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 // On a self-hosted AWS deployment without proper cache infrastructure, every visitor
 // hits the DB fresh — or the page is stale indefinitely depending on the setup.
 export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 const CATEGORY_ICON: Record<Category, string> = {
   FEATURE: "✨",
