@@ -20,17 +20,22 @@ function createPrismaClient() {
   if (!connectionString) {
     throw new Error("DATABASE_URL environment variable is not set");
   }
-  // Use pool size of 1 for serverless environments (Vercel functions)
-  // to avoid connection exhaustion across concurrent invocations.
+  // Parse and reconstruct the connection string to handle special characters
+  // in passwords (e.g. !, @) that can get double-encoded in some environments.
+  const url = new URL(connectionString);
   const pool = new Pool({
-    connectionString,
+    host: url.hostname,
+    port: parseInt(url.port || "5432"),
+    database: url.pathname.replace("/", ""),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
     max: 1,
     ssl: { rejectUnauthorized: false },
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({
     adapter,
-    log: ["error"], // minimal logging — no query tracing
+    log: ["error"],
   });
 }
 
