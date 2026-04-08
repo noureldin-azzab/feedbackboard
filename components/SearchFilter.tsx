@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Category, Status } from "@prisma/client";
-import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants";
+import { type Category, type Status, CATEGORY_LABELS, STATUS_LABELS } from "@/lib/constants";
 
 export default function SearchFilter() {
   const router = useRouter();

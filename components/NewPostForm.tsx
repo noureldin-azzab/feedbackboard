@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Category } from "@prisma/client";
-import { CATEGORY_LABELS } from "@/lib/constants";
+import { type Category, CATEGORY_LABELS } from "@/lib/constants";
 
 export default function NewPostForm() {
   const router = useRouter();
@@ -16,7 +15,7 @@ export default function NewPostForm() {
   const [form, setForm] = useState({
     title: "",
     description: "",
-    category: Category.FEATURE,
+    category: "FEATURE" as Category,
     authorName: "",
     authorEmail: "",
   });

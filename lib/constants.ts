@@ -1,4 +1,5 @@
-import { Category, Status } from "@prisma/client";
+export type Category = "FEATURE" | "BUG" | "IMPROVEMENT" | "QUESTION";
+export type Status = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   FEATURE: "Feature Request",
