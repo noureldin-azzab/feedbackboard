@@ -1,6 +1,6 @@
 # FeedbackBoard — Customer Feedback Portal
 
-> Built with **[Stakpak](https://github.com/stakpak/agent)** — an open source agent that lives on your machines 24/7, keeps your apps running, and only pings when it needs a human. All the upside of a PaaS, none of the lock-in.
+> Built with **[Stakpak](https://github.com/stakpak/agent)** — an open source agent that lives on your machines 24/7, keeps your apps running, and only pings when it needs a human. .
 
 A simple full-stack feedback board built with **Next.js 16 (App Router)**, **TypeScript**, **Supabase**, **PostgreSQL**, and **Tailwind CSS**.
 
@@ -172,21 +172,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ├── .env.example
 └── next.config.ts
 ```
-
----
-
-## Known Infrastructure Assumptions (Migration Notes)
-
-This app was built assuming a Vercel-style deployment. The following areas will need attention when migrating to AWS:
-
-| Area | Current Behavior | What to Change |
-|------|-----------------|----------------|
-| **File uploads** | Saved to `public/uploads/` on disk | Replace with S3 + presigned URLs |
-| **Image URLs** | Absolute URLs using `NEXT_PUBLIC_APP_URL` (localhost) | Point to S3/CloudFront |
-| **ISR / caching** | `revalidate = 60` uses Vercel's edge cache | Set up Redis or custom cache handler |
-| **DB connections** | Single PrismaClient per process | Add PgBouncer or use RDS Proxy to manage connection pooling |
-| **next.config.ts** | `remotePatterns` allows only `localhost` | Add production domain / S3 bucket |
-| **Logging** | `console.error` only — no structured logs | Add structured logging (pino, Datadog, CloudWatch) |
 
 ---
 
