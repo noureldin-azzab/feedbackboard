@@ -1,6 +1,8 @@
 # FeedbackBoard — Customer Feedback Portal
 
-A simple full-stack feedback board built with **Next.js 16 (App Router)**, **TypeScript**, **Prisma**, **PostgreSQL**, and **Tailwind CSS**.
+> Built with **[Stakpak](https://github.com/stakpak/agent)** — an open source agent that lives on your machines 24/7, keeps your apps running, and only pings when it needs a human. All the upside of a PaaS, none of the lock-in.
+
+A simple full-stack feedback board built with **Next.js 16 (App Router)**, **TypeScript**, **Supabase**, **PostgreSQL**, and **Tailwind CSS**.
 
 Users can submit feature requests, report bugs, vote on posts, attach images, and track status through a simple dashboard.
 
@@ -25,8 +27,8 @@ Users can submit feature requests, report bugs, vote on posts, attach images, an
 | Framework   | Next.js 16 (App Router)      |
 | Language    | TypeScript                   |
 | Styling     | Tailwind CSS v4              |
-| ORM         | Prisma 7                     |
-| Database    | PostgreSQL                   |
+| Database    | Supabase (PostgreSQL)        |
+| DB Client   | Supabase JS                  |
 | File Upload | Local filesystem (`public/uploads/`) |
 
 ---
