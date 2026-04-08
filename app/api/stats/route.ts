@@ -1,42 +1,45 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
-// GET /api/stats — dashboard statistics
-// MIGRATION NOTE: This calls the internal app URL to warm the cache, which
-// assumes localhost:3000. This pattern breaks on distributed/multi-instance deploys.
 export async function GET() {
   try {
-    const [
-      totalPosts,
-      openPosts,
-      resolvedPosts,
-      totalVotes,
-      categoryCounts,
-      statusCounts,
-      recentPosts,
-    ] = await Promise.all([
-      prisma.post.count(),
-      prisma.post.count({ where: { status: "OPEN" } }),
-      prisma.post.count({ where: { status: "RESOLVED" } }),
-      prisma.post.aggregate({ _sum: { votes: true } }),
-      prisma.post.groupBy({ by: ["category"], _count: { id: true } }),
-      prisma.post.groupBy({ by: ["status"], _count: { id: true } }),
-      prisma.post.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: { id: true, title: true, createdAt: true, votes: true, category: true },
-      }),
-    ]);
+    const { data: posts, error } = await db.from("Post").select("*");
+    if (error) throw error;
+
+    const totalPosts = posts.length;
+    const openPosts = posts.filter((p) => p.status === "OPEN").length;
+    const inProgressPosts = posts.filter((p) => p.status === "IN_PROGRESS").length;
+    const resolvedPosts = posts.filter((p) => p.status === "RESOLVED").length;
+    const totalVotes = posts.reduce((sum, p) => sum + (p.votes || 0), 0);
+
+    const categoryMap: Record<string, number> = {};
+    posts.forEach((p) => {
+      categoryMap[p.category] = (categoryMap[p.category] || 0) + 1;
+    });
+    const categoryCounts = Object.entries(categoryMap).map(([category, count]) => ({
+      category,
+      _count: { id: count },
+    }));
+
+    const recentPosts = [...posts]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+      .map((p) => ({ id: p.id, title: p.title, createdAt: p.createdAt, votes: p.votes, status: p.status, category: p.category }));
+
+    const topPosts = [...posts]
+      .sort((a, b) => b.votes - a.votes)
+      .slice(0, 5)
+      .map((p) => ({ id: p.id, title: p.title, votes: p.votes, status: p.status, category: p.category }));
 
     return NextResponse.json({
       totalPosts,
       openPosts,
+      inProgressPosts,
       resolvedPosts,
-      inProgressPosts: await prisma.post.count({ where: { status: "IN_PROGRESS" } }),
-      totalVotes: totalVotes._sum.votes ?? 0,
+      totalVotes,
       categoryCounts,
-      statusCounts,
       recentPosts,
+      topPosts,
     });
   } catch (error) {
     console.error("Stats fetch failed:", error);

@@ -1,33 +1,25 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import CommentSection from "@/components/CommentSection";
 import { CATEGORY_COLORS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+type Category = "FEATURE" | "BUG" | "IMPROVEMENT" | "QUESTION";
+type Status = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const post = await prisma.post.findUnique({ where: { id }, select: { title: true } });
+  const { data: post } = await db.from("Post").select("title").eq("id", id).single();
   return { title: post ? `${post.title} — FeedbackBoard` : "Post Not Found" };
 }
 
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const [post, comments] = await Promise.all([
-    prisma.post.findUnique({ where: { id } }),
-    prisma.comment.findMany({
-      where: { postId: id },
-      orderBy: { createdAt: "asc" },
-    }),
+  const [{ data: post }, { data: comments }] = await Promise.all([
+    db.from("Post").select("*").eq("id", id).single(),
+    db.from("Comment").select("*").eq("postId", id).order("createdAt", { ascending: true }),
   ]);
 
   if (!post) notFound();
@@ -38,20 +30,15 @@ export default async function PostPage({
         ← Back to posts
       </Link>
 
-      {/* Post card */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 mt-4 mb-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <h1 className="text-xl font-bold text-gray-900">{post.title}</h1>
           <div className="flex gap-2 flex-shrink-0">
-            <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${CATEGORY_COLORS[post.category]}`}
-            >
-              {CATEGORY_LABELS[post.category]}
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${CATEGORY_COLORS[post.category as Category]}`}>
+              {CATEGORY_LABELS[post.category as Category]}
             </span>
-            <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[post.status]}`}
-            >
-              {STATUS_LABELS[post.status]}
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[post.status as Status]}`}>
+              {STATUS_LABELS[post.status as Status]}
             </span>
           </div>
         </div>
@@ -60,13 +47,7 @@ export default async function PostPage({
 
         {post.imageUrl && (
           <div className="mb-4 rounded-lg overflow-hidden relative w-full h-64">
-            <Image
-              src={post.imageUrl}
-              alt="Post attachment"
-              fill
-              className="object-cover"
-              unoptimized
-            />
+            <Image src={post.imageUrl} alt="Post attachment" fill className="object-cover" unoptimized />
           </div>
         )}
 
@@ -77,25 +58,21 @@ export default async function PostPage({
           </div>
           <div className="flex items-center gap-1 text-gray-500">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 15l7-7 7 7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>
             <span className="text-sm font-semibold">{post.votes} votes</span>
           </div>
         </div>
       </div>
 
-      {/* Comments */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <CommentSection
           postId={post.id}
-          initialComments={comments.map((c) => ({
-            ...c,
-            createdAt: c.createdAt.toISOString(),
+          initialComments={(comments || []).map((c) => ({
+            id: c.id,
+            body: c.body,
+            authorName: c.authorName,
+            createdAt: c.createdAt,
           }))}
         />
       </div>

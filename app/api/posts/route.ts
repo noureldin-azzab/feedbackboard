@@ -1,45 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { Category, Status } from "@prisma/client";
+import { db } from "@/lib/db";
 
-// GET /api/posts — list posts with optional search/filter
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") || "";
-  const category = searchParams.get("category") as Category | null;
-  const status = searchParams.get("status") as Status | null;
+  const category = searchParams.get("category") || "";
+  const status = searchParams.get("status") || "";
 
   try {
-    const posts = await prisma.post.findMany({
-      where: {
-        AND: [
-          search
-            ? {
-                OR: [
-                  { title: { contains: search, mode: "insensitive" } },
-                  { description: { contains: search, mode: "insensitive" } },
-                ],
-              }
-            : {},
-          category ? { category } : {},
-          status ? { status } : {},
-        ],
-      },
-      include: {
-        _count: { select: { comments: true } },
-      },
-      orderBy: { votes: "desc" },
-    });
+    let query = db
+      .from("Post")
+      .select(`*, comment_count:Comment(count)`)
+      .order("votes", { ascending: false });
+
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+    if (category) query = query.eq("category", category);
+    if (status) query = query.eq("status", status);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Normalize comment count
+    const posts = (data || []).map((p: Record<string, unknown>) => ({
+      ...p,
+      _count: { comments: (p.comment_count as { count: number }[])?.[0]?.count ?? 0 },
+      comment_count: undefined,
+    }));
 
     return NextResponse.json(posts);
   } catch (error) {
-    // Minimal error logging — no structured logging or alerting
     console.error("GET /api/posts failed:", error);
     return NextResponse.json({ error: "Failed to fetch posts" }, { status: 500 });
   }
 }
 
-// POST /api/posts — create a new post
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -49,18 +45,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const post = await prisma.post.create({
-      data: {
+    const { data, error } = await db
+      .from("Post")
+      .insert({
+        id: crypto.randomUUID(),
         title,
         description,
-        category: category || Category.FEATURE,
+        category: category || "FEATURE",
+        status: "OPEN",
+        votes: 0,
         authorName,
         authorEmail,
         imageUrl: imageUrl || null,
-      },
-    });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(post, { status: 201 });
+    if (error) throw error;
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("POST /api/posts failed:", error);
     return NextResponse.json({ error: "Failed to create post" }, { status: 500 });

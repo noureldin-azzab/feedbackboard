@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
-// GET /api/posts/[id]/comments
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   try {
-    const comments = await prisma.comment.findMany({
-      where: { postId: id },
-      orderBy: { createdAt: "asc" },
-    });
-    return NextResponse.json(comments);
+    const { data, error } = await db
+      .from("Comment")
+      .select("*")
+      .eq("postId", id)
+      .order("createdAt", { ascending: true });
+
+    if (error) throw error;
+    return NextResponse.json(data || []);
   } catch (error) {
     console.error("GET comments failed:", error);
     return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
-// POST /api/posts/[id]/comments
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -33,15 +34,20 @@ export async function POST(
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const comment = await prisma.comment.create({
-      data: {
+    const { data, error } = await db
+      .from("Comment")
+      .insert({
+        id: crypto.randomUUID(),
         body: commentBody,
         authorName,
         postId: id,
-      },
-    });
+        createdAt: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-    return NextResponse.json(comment, { status: 201 });
+    if (error) throw error;
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("POST comment failed:", error);
     return NextResponse.json({ error: "Failed to add comment" }, { status: 500 });
